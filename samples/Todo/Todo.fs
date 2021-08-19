@@ -58,6 +58,7 @@ module Model =
                 TodoId : string
                 Action : InputAction
             }
+            static member Empty = { TodoId = String.Empty; Action = InputAction.MarkComplete }
 
         // Errors
         type Error = 
@@ -168,9 +169,47 @@ module View =
 module Controller =
     open Model 
     
-    /// HTTP POST /todo/change-status/{id}?complete={true|false}
+    /// HTTP GET /todo/change-status?id={id}&complete={true|false}
     let changeStatusSubmit : HttpHandler =
-        Response.ofEmpty
+        let handleError (e : ChangeStatus.Error) =
+            
+            let errors =
+                match e with
+                | ChangeStatus.InvalidInput (_, error) -> error
+                | ChangeStatus.NonExistentTodo -> []
+                
+            let todos, errors =
+                match (Provider.TodoProvider.getAll ()) with
+                | []     -> TodoSummary.Empty,           errors @ [ "Currently, there are no todos" ]
+                | todos  -> (todos |> GetAll.mapResult), errors
+                
+            View.index todos errors
+            |> Response.ofHtml
+
+        let handleOk () =
+            Response.redirect ``/`` false
+
+        let handleService input = 
+            Service.run
+                (ChangeStatus.handle (Provider.TodoProvider.updateStatus))
+                handleOk
+                handleError
+                input
+        
+        let queryBinder (query : QueryCollectionReader) : ChangeStatus.Input =
+            let action =
+                match (query.GetBoolean "complete" false) with
+                | true -> ChangeStatus.InputAction.MarkComplete
+                | false -> ChangeStatus.InputAction.MarkIncomplete
+            
+            { 
+                TodoId = query.GetString "id" ""
+                Action = action
+            }
+        
+        Request.mapQuery
+            queryBinder
+            handleService
 
     /// HTTP GET /todo/create
     let create : HttpHandler =

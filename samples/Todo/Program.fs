@@ -40,6 +40,8 @@ let main args =
                         GET, Todo.Controller.create
                         POST, Todo.Controller.createSubmit
                     ]
+                get "/todo/change-status"
+                    Todo.Controller.changeStatusSubmit
                 get "/" 
                     Todo.Controller.index
             ]
