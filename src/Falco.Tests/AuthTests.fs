@@ -18,13 +18,32 @@ let ``Auth.isAuthenticated return based on principal authentication`` (isAuthent
     Auth.isAuthenticated ctx
     |> should equal isAuthenticated
 
+
+type myRoles = Admin | Other
+
+[<Struct>]
+type fastRoles = SuperUser | RegularUser
+    with override this.ToString() =
+            match this with
+            | SuperUser   -> "SuperUser"
+            | RegularUser -> "RegularUser"
+
+type RolesData() as this =
+    inherit TheoryData<obj, bool>()
+    do  this.Add("Admin", true)
+        this.Add("Admin", false)
+        this.Add(Admin, false)
+        this.Add(Admin, true)
+        this.Add(Other, false)
+        this.Add(Other, true)
+        this.Add(SuperUser, false)
+        this.Add(RegularUser, true)
+
 [<Theory>] 
-[<InlineData(false)>]
-[<InlineData(true)>]
-let ``Auth.isInRole returns if principal has role`` (inRole : bool) = 
+[<ClassData(typeof<RolesData>)>]
+let ``Auth.isInRole returns if principal has role`` (role) (inRole : bool) = 
     let ctx = getHttpContextWriteable false
-    let role = "Admin"
-    ctx.User.IsInRole(role).Returns(inRole) |> ignore
+    ctx.User.IsInRole(role.ToString()).Returns(inRole) |> ignore
     Auth.isInRole [role] ctx
     |> should equal inRole
 

@@ -685,8 +685,22 @@ let secureResourceHandler : HttpHandler =
         Response.withStatusCode 403 
         >> Response.ofPlainText "Forbidden"
 
-    let rolesAllowed = [ "Admin" ]
+    // Option 1
+    let rolesAllowed = ["Admin"; "SuperUser"]
+    Request.ifAuthenticatedInRole rolesAllowed handleAuthInRole handleInvalid
 
+    // Option 2
+    let rolesAllowed = Admin | SuperUser
+    Request.ifAuthenticatedInRole rolesAllowed handleAuthInRole handleInvalid
+
+     // Option 2b (reduced overhead)
+    [<Struct>]
+    type rolesAllowed = Admin | SuperUser
+        with override this.ToString() =
+                match this with
+                | Admin     -> "Admin"
+                | SuperUser -> "SuperUser"
+        
     Request.ifAuthenticatedInRole rolesAllowed handleAuthInRole handleInvalid
 ```
 
